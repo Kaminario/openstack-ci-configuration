@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Example project-config repository
 
 This is an example project-config repository for use as a
@@ -78,3 +79,7 @@ This repository is based on work created from the following sources:
 
 3. [jaypipes/os-ext-testing-data](https://github.com/jaypipes/os-ext-testing-data)
 
+=======
+# openstack-cinder
+Openstack Cinder driver for Kaminario K2
+>>>>>>> 805af4956c900e0312902df9520287886b00a746
