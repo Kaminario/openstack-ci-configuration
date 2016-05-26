@@ -21,7 +21,7 @@ HOSTNAME=$1
 SUDO=${SUDO:-true}
 THIN=${THIN:-true}
 ALL_MYSQL_PRIVS=${ALL_MYSQL_PRIVS:-false}
-GIT_BASE=${GIT_BASE:-git://git.openstack.org}
+GIT_BASE=${GIT_BASE:-https://git.openstack.org}
 
 sudo hostname $HOSTNAME
 if [ -n "$HOSTNAME" ] && ! grep -q $HOSTNAME /etc/hosts ; then
