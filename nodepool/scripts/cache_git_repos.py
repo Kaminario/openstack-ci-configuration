@@ -33,7 +33,7 @@ PROJECT_RE = re.compile('^-?\s+project:\s+(.*)$')
 if len(sys.argv) > 1:
     GIT_BASE = sys.argv[1]
 else:
-    GIT_BASE = 'git://git.openstack.org'
+    GIT_BASE = 'https://git.openstack.org'
 
 
 def clone_repo(project):
