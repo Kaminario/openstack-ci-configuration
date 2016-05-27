@@ -48,7 +48,7 @@ providers:
   - name: local_01
 #TODO: Update the provider username, password, and authurl
     username: 'admin'
-    password: 'Vedams@123'
+    password: 'nomoresecret'
     auth-url: 'http://192.168.6.5:5000/v2.0'
     project-name: 'admin'
     boot-timeout: 1200
