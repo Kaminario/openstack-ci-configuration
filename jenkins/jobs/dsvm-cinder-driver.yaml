@@ -61,7 +61,7 @@
           export GIT_BASE=https://git.openstack.org
 
           if [ -z $ZUUL_PROJECT ]; then
-              export ZUUL_PROJECT=openstack-dev/sandbox
+              export ZUUL_PROJECT=openstack-dev/ci-sandbox
           fi
           if [ -z $ZUUL_BRANCH ]; then
               export ZUUL_BRANCH=master
