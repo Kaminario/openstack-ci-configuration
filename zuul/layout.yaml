@@ -72,8 +72,8 @@ projects:
     check:
       # Remove this after successfully verifying communication with upstream
       # and seeing a posted successful review.
-      - dsvm-tempest-full
+      - noop-check-communication
     silent:
       # Uncomment this job when you have a jenkins slave running and want to
       # test a full Tempest run within devstack.
-      - noop-check-communication
+      - dsvm-tempest-full
