@@ -69,7 +69,7 @@ jobs:
 
 projects:
   - name: openstack-dev/ci-sandbox
-    check:
+    #check:
       # Remove this after successfully verifying communication with upstream
       # and seeing a posted successful review.
      # - noop-check-communication
