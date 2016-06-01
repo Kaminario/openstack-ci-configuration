@@ -69,4 +69,4 @@ targets:
 #TODO: If you are using secured jenkins, update this to vars.sh JENKINS_API_KEY.
       apikey: '1a9f1817dadd12e40e16f0a9138ec878'
 #TODO: If you changed JENKINS_CREDENTIALS_ID in vars.sh, update it here too:
-      credentials-id: '1a9f1817dadd12e40e16f0a9138ec878'
+      credentials-id: '2be6f0da-9b54-4e60-8280-f5fcc59b3713'
