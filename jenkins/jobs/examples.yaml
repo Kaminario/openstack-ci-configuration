@@ -44,6 +44,9 @@
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
           ./safe-devstack-vm-gate-wrap.sh
       - link-logs
+    publishers:
+      - devstack-logs
+      - console-log
 
 
 - job-template:
