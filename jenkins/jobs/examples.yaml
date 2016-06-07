@@ -45,6 +45,87 @@
           ./safe-devstack-vm-gate-wrap.sh
       - link-logs
 
+
+- job-template:
+    name: 'kaminario-dsvm-tempest-full-iscsi'
+    node: '{node}'
+
+    wrappers:
+      - timeout:
+          timeout: 300
+          fail: true
+      - timestamps
+
+    builders:
+      - link-logs
+      - net-info
+      - devstack-checkout-http
+      - shell: |
+          #!/bin/bash -xe
+          sudo bash -c 'cat <<EOF > /etc/iscsi/initiatorname.iscsi
+          InitiatorName=iqn.1993-08.org.debian:01:$HOSTNAME
+          EOF'
+          function pre_test_hook {{
+              echo "Configure the local.conf file to properly setup kaminario driver in cinder.conf"
+              cat <<EOF >>$BASE/new/cinder/requirements.txt
+          krest==1.3.0
+          EOF
+              cat <<EOF >>$BASE/new/tempest/test-requirements.txt
+          krest==1.3.0
+          EOF
+              cat <<EOF >$BASE/new/devstack/local.conf
+          [[post-config|\$CINDER_CONF]]
+          [DEFAULT]
+          enabled_backends=kaminario-iscsi
+          default_volume_type=kaminario-iscsi
+          Q_USE_SECGROUP=False
+          LIBVIRT_FIREWALL_DRIVER=nova.virt.firewall.NoopFirewallDriver
+          #CINDER_PERIODIC_INTERVAL=10
+          CINDER_SECURE_DELETE=False
+          API_RATE_LIMIT=False
+          [kaminario-iscsi]
+          # add you driver configuration here
+          volume_driver = cinder.volume.drivers.kaminario.kaminario_iscsi.KaminarioISCSIDriver
+          volume_backend_name = kaminario-iscsi
+          san_ip = 192.168.6.4
+          san_login = admin
+          san_password = admin
+          # Use post-extra because the tempest configuration file is
+          # overwritten with the .sample after post-config.
+          [[post-extra|\$TEMPEST_CONFIG]]
+          [volume]
+          storage_protocol=iSCSI
+          vendor_name="Kaminario"
+          EOF
+              echo "Configure localrc file to properly setup CINDER_ENABLED_BACKENDS"
+              cat <<EOF >>$BASE/new/devstack/localrc
+          CINDER_ENABLED_BACKENDS=kaminario-iscsi:kaminario-iscsi
+          EOF
+          git clone https://nikesh-biarca:Nike.256029@github.com/vedamsgit/Kaminario.git
+          cp -r Kaminario/kaminario $BASE/new/cinder/cinder/volume/drivers
+          }}
+          export -f pre_test_hook
+          # To keep our CINDER_ENABLED_BACKENDS configuration in localrc
+          export KEEP_LOCALRC=1
+          export PYTHONUNBUFFERED=true
+          export DEVSTACK_GATE_TIMEOUT=300
+          export DEVSTACK_GATE_TEMPEST=1
+          export DEVSTACK_GATE_TEMPEST_REGEX='^(?=.*volume*)(?!tempest.scenario.*)'
+          export TEMPEST_CONCURRENCY=1
+          export OVERRIDE_ENABLED_SERVICES=c-api,c-sch,c-vol,g-api,g-reg,key,mysql,n-api,n-cond,n-cpu,n-crt,n-net,n-obj,n-sch,rabbit,tempest
+          export DEVSTACK_GATE_FIXED_RANGE=10.1.0.0/20
+          export DEVSTACK_GATE_FLOATING_RANGE=192.168.6.128/29
+          export DEVSTACK_GATE_PUBLIC_NETWORK_GATEWAY=192.168.6.1
+          export GIT_BASE="https://git.openstack.org"
+          if [ -z $ZUUL_PROJECT ]; then
+              export ZUUL_PROJECT=openstack-dev/ci-sandbox
+          fi
+          if [ -z $ZUUL_BRANCH ]; then
+              export ZUUL_BRANCH=master
+          fi
+          cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
+          ./safe-devstack-vm-gate-wrap.sh
+
     publishers:
       - devstack-logs
       - console-log
