@@ -67,6 +67,6 @@ targets:
 #TODO: If you are using a different user in vars.sh JENKINS_API_USER, update it here.
       user: 'jenkins'
 #TODO: If you are using secured jenkins, update this to vars.sh JENKINS_API_KEY.
-      apikey: 'd96ffd3d91b83a0197e3047cb40929b0'
+      apikey: '9b2aaf3043472ac60c770d62a872e96b'
 #TODO: If you changed JENKINS_CREDENTIALS_ID in vars.sh, update it here too:
-      credentials-id: '9ccc29db-cfbf-4f59-996d-2d4f2cda610e'
+      credentials-id: 'f4fe5b04-7c0e-44f5-9db5-d36de91f4baa'
