@@ -49,13 +49,13 @@ providers:
 #TODO: Update the provider username, password, and authurl
     username: 'admin'
     password: 'nomoresecret'
-    auth-url: 'http://192.168.6.5:5000/v2.0'
+    auth-url: 'http://192.168.6.7:5000/v2.0'
     project-name: 'admin'
     boot-timeout: 1200
     max-servers: 1
     images:
       - name: dpc
-        min-ram: 8192
+        min-ram: 16384
         diskimage: dpc
         username: jenkins
         private-key: '/home/nodepool/.ssh/id_rsa'
