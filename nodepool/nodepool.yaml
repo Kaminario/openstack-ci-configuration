@@ -24,11 +24,17 @@ gearman-servers:
   - host: 192.168.6.8
 
 labels:
-  - name: d-p-c
+  - name: d-p-c-iscsi
     image: dpc
     min-ready: 1
     providers:
-      - name: local_01
+      - name: local_iscsi
+
+  - name: d-p-c-fc
+    image: dpc
+    min-ready: 1
+    providers:
+      - name: local_fc
 
 diskimages:
     - name: dpc
@@ -43,12 +49,13 @@ diskimages:
       env-vars:
         TMPDIR: /opt/dib_tmp
         DIB_IMAGE_CACHE: /opt/dib_cache
+      
 
 providers:
-  - name: local_01
+  - name: local_fc
 #TODO: Update the provider username, password, and authurl
     username: 'admin'
-    password: 'nomoresecret'
+    password: 'Vedams@123'
     auth-url: 'http://192.168.6.5:5000/v2.0'
     project-name: 'admin'
     boot-timeout: 1200
@@ -56,9 +63,27 @@ providers:
     images:
       - name: dpc
         min-ram: 16384
+        name-filter: 'm1.xlarge'
         diskimage: dpc
         username: jenkins
         private-key: '/home/nodepool/.ssh/id_rsa'
+
+  - name: local_iscsi
+#TODO: Update the provider username, password, and authurl
+    username: 'admin'
+    password: 'Vedams@123'
+    auth-url: 'http://192.168.6.5:5000/v2.0'
+    project-name: 'admin'
+    boot-timeout: 1200
+    max-servers: 1
+    images:
+      - name: dpc
+        min-ram: 16384
+        name-filter: 'm1.xxlarge'
+        diskimage: dpc
+        username: jenkins
+        private-key: '/home/nodepool/.ssh/id_rsa'
+
 
 targets:
   - name: jenkins1
