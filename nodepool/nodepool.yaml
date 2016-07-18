@@ -15,13 +15,13 @@ cron:
 #   root@jenkins:~# echo "0 $((RANDOM%23+1)) * * *"
 #   0 16 * * *
 # This references the hour of the day when images will be built.
-  image-update: '0 0 * * *'
+  image-update: '30 8 1 * *'
 
 zmq-publishers:
-  - tcp://localhost:8888
+  - tcp://192.168.6.8:8888
 
 gearman-servers:
-  - host: 127.0.0.1
+  - host: 192.168.6.8
 
 labels:
   - name: d-p-c
@@ -62,11 +62,12 @@ providers:
 
 targets:
   - name: jenkins1
-  #  jenkins:
-  #    url: 'http://localhost:8080/'
+    jenkins:
+      url: 'http://192.168.6.8:8080/'
 #TODO: If you are using a different user in vars.sh JENKINS_API_USER, update it here.
-   #   user: 'jenkins'
+      user: 'jenkins'
 #TODO: If you are using secured jenkins, update this to vars.sh JENKINS_API_KEY.
-    #  apikey: 'd96ffd3d91b83a0197e3047cb40929b0'
+      apikey: '9b2aaf3043472ac60c770d62a872e96b'
 #TODO: If you changed JENKINS_CREDENTIALS_ID in vars.sh, update it here too:
-     # credentials-id: '9ccc29db-cfbf-4f59-996d-2d4f2cda610e'
+      credentials-id: 'f4fe5b04-7c0e-44f5-9db5-d36de91f4baa'
+
