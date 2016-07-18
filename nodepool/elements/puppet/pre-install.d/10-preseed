@@ -41,3 +41,6 @@ EOF
     rm $PRESEED
     ;;
 esac
+sudo apt-get  update
+sudo apt-get -y -qq install linux-image-extra-$(uname -r)
+
