@@ -28,13 +28,13 @@ labels:
     image: dpc
     min-ready: 1
     providers:
-      - name: local_iscsi
+      - name: local-iscsi
 
   - name: d-p-c-fc
     image: dpc
     min-ready: 1
     providers:
-      - name: local_fc
+      - name: local-fc
 
 diskimages:
     - name: dpc
@@ -52,7 +52,7 @@ diskimages:
       
 
 providers:
-  - name: local_fc
+  - name: local-fc
 #TODO: Update the provider username, password, and authurl
     username: 'admin'
     password: 'Vedams@123'
@@ -68,7 +68,7 @@ providers:
         username: jenkins
         private-key: '/home/nodepool/.ssh/id_rsa'
 
-  - name: local_iscsi
+  - name: local-iscsi
 #TODO: Update the provider username, password, and authurl
     username: 'admin'
     password: 'Vedams@123'
@@ -87,12 +87,11 @@ providers:
 
 targets:
   - name: jenkins1
-    jenkins:
-      url: 'http://192.168.6.8:8080/'
+    #jenkins:
+     # url: 'http://192.168.6.8:8080/'
 #TODO: If you are using a different user in vars.sh JENKINS_API_USER, update it here.
-      user: 'jenkins'
+      #user: 'jenkins'
 #TODO: If you are using secured jenkins, update this to vars.sh JENKINS_API_KEY.
-      apikey: '9b2aaf3043472ac60c770d62a872e96b'
+      #apikey: '9b2aaf3043472ac60c770d62a872e96b'
 #TODO: If you changed JENKINS_CREDENTIALS_ID in vars.sh, update it here too:
-      credentials-id: 'f4fe5b04-7c0e-44f5-9db5-d36de91f4baa'
-
+      #credentials-id: 'f4fe5b04-7c0e-44f5-9db5-d36de91f4baa'
