@@ -5,17 +5,29 @@ includes:
 pipelines:
   - name: check
     description: Newly uploaded patchsets enter this pipeline to receive an initial +/-1 Verified vote from Jenkins.
-    failure-message: "Build failed.  To recheck use 'myvendor: recheck'.  For 3rd party ci contact info: https://wiki.openstack.org/wiki/ThirdPartySystems"
+    failure-message: "Build failed. For 3rd party CI contact info: https://wiki.openstack.org/wiki/ThirdPartySystems"
     manager: IndependentPipelineManager
+    #require:
+      #open: true
+      #current-patchset: true
+      #approval:
+        #- verified: [1]
+          #username: jenkins
     trigger:
       gerrit:
         - event: patchset-created
+          branch: master
         - event: change-restored
-        # TODO: Change "myvendor" below to your vendor's name to add a custom
-        # recheck trigger that runs the check pipeline jobs when someone
-        # adds a comment to a review that says "myvendor: recheck".
+          branch: master
+        #- event: comment-added
+         # branch: master
+          #username: jenkins
         - event: comment-added
-          comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*kaminarioK2-FC:\s*recheck\s*$
+          branch: master
+          comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*recheck(( (?:bug|lp)[\s#:]*(\d+))|( no bug))\s*$
+        - event: comment-added
+          branch: master
+          comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*run(( (?:bug|lp)[\s#:]*(\d+))|(-Kaminario K2 CI))\s*$
     success:
       gerrit:
         verified: 1
@@ -39,44 +51,22 @@ pipelines:
         from: zuul@example.com
         subject: Upstream change {change} has a merge failure
 
-
-  - name: silent
-    description: Newly uploaded patchsets enter this pipeline to check jobs whose results are NOT to be posted (because e.g. they are not yet stable)
-    manager: IndependentPipelineManager
-    trigger:
-      gerrit:
-        - event: patchset-created
-        - event: change-restored
-        - event: comment-added
-          comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*kaminarioK2-iscsi:\s*recheck\s*$
-    success:
-      smtp:
-        #TODO: Update these to real e-mail addresses
-        to: third_party_ci@example.com
-        from: zuul@example.com
-        subject: 'Silent check of {change.project} {change.number},{change.patchset} passed'
-    failure:
-      smtp:
-        #TODO: Update these to real e-mail addresses
-        to: third_party_ci@example.com
-        from: zuul@example.com
-        subject: 'Silent check of {change.project} {change.number},{change.patchset} failed'
-
-
 jobs:
   - name: ^dsvm-tempest.*$
     parameter-function: single_use_node
 
 projects:
   - name: openstack-dev/ci-sandbox
-    #check:
+    check:
       # Remove this after successfully verifying communication with upstream
       # and seeing a posted successful review.
-     # - noop-check-communication
-
-    check:
+#      - dsvm-tempest-my-cinder-driver
+    #check1:
       # Uncomment this job when you have a jenkins slave running and want to
       # test a full Tempest run within devstack.
      # - dsvm-tempest-full
-      - kaminario-dsvm-tempest-full-FC
+     - kaminario-dsvm-tempest-full-iscsi
+     - kaminario-dsvm-tempest-full-FC 
+     #- kaminario-dsvm-test1
+     #- kaminario-dsvm-test2
 
