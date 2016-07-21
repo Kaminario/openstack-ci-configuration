@@ -77,8 +77,22 @@
           files:
             - target: 'logs/$LOG_PATH'
               source: 'logs/**'
+              #source: 'log-test/**'
               keep-hierarchy: true
               copy-after-failure: true
+
+- publisher:
+    name: dummy-logs
+    publishers:
+      - scp:
+          site: 'LogServer'
+          files:
+            - target: 'logs/$LOG_PATH'
+              #source: 'logs/**'
+              source: 'log-test/**'
+              keep-hierarchy: true
+              copy-after-failure: true
+
 
 - builder:
     name: net-info
