@@ -87,11 +87,11 @@ providers:
 
 targets:
   - name: jenkins1
-    jenkins:
-      url: 'http://localhost:8080/'
+    #jenkins:
+      #url: 'http://localhost:8080/'
 #TODO: If you are using a different user in vars.sh JENKINS_API_USER, update it here.
-      user: 'jenkins'
+      #user: 'jenkins'
 #TODO: If you are using secured jenkins, update this to vars.sh JENKINS_API_KEY.
-      apikey: '1222ba5f20263b5f5448b240b0ee12c2'
+      #apikey: '1222ba5f20263b5f5448b240b0ee12c2'
 #TODO: If you changed JENKINS_CREDENTIALS_ID in vars.sh, update it here too:
-      credentials-id: '8f7f2fd9-feee-4063-b56d-21b270790055'
+      #credentials-id: '8f7f2fd9-feee-4063-b56d-21b270790055'
