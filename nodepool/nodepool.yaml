@@ -87,7 +87,7 @@ providers:
 
 targets:
   - name: jenkins1
-    #jenkins:
+    jenkins:
       url: 'http://localhost:8080/'
 #TODO: If you are using a different user in vars.sh JENKINS_API_USER, update it here.
       user: 'jenkins'
