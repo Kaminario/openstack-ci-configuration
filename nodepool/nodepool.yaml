@@ -44,8 +44,8 @@ diskimages:
         - openstack-repos
         - puppet
         - nodepool-base
-        - node-devstack
-      release: trusty
+        - cache-devstack
+      release: bionic
       env-vars:
         TMPDIR: /opt/dib_tmp
         DIB_IMAGE_CACHE: /opt/dib_cache
@@ -55,43 +55,53 @@ providers:
   - name: local-fc
 #TODO: Update the provider username, password, and authurl
     username: 'admin'
-    password: 'Vedams@123'
-    auth-url: 'http://192.168.6.5:5000/v2.0'
-    project-name: 'admin'
+    password: 'Vedams123'
+    auth-url: 'http://192.168.6.6/identity/v3/'
+    project-name: 'demo'
     boot-timeout: 1200
+    user-domain-name: Default
     max-servers: 1
+    networks:
+      - name: private
+    security-groups:
+      - default
     images:
       - name: dpc
         min-ram: 16384
         name-filter: 'm1.xlarge'
         diskimage: dpc
-        username: jenkins
+        username: zuul
         private-key: '/home/nodepool/.ssh/id_rsa'
 
   - name: local-iscsi
 #TODO: Update the provider username, password, and authurl
     username: 'admin'
-    password: 'Vedams@123'
-    auth-url: 'http://192.168.6.5:5000/v2.0'
-    project-name: 'admin'
+    password: 'Vedams123'
+    auth-url: 'http://192.168.6.6/identity/v3/'
+    project-name: 'demo'
+    user-domain-name: Default
     boot-timeout: 1200
     max-servers: 1
+    networks:
+      - name: private
+    security-groups:
+      - default
     images:
       - name: dpc
         min-ram: 16384
         name-filter: 'm1.xxlarge'
         diskimage: dpc
-        username: jenkins
+        username: zuul
         private-key: '/home/nodepool/.ssh/id_rsa'
 
 
 targets:
   - name: jenkins1
-    jenkins:
-      url: 'http://localhost:8080/'
+    #    jenkins:
+    #  url: 'http://localhost:8080/'
 #TODO: If you are using a different user in vars.sh JENKINS_API_USER, update it here.
-      user: 'jenkins'
+#  user: 'jenkins'
 #TODO: If you are using secured jenkins, update this to vars.sh JENKINS_API_KEY.
-      apikey: '53555dafbd69907a9294122387c4832b'
+#     apikey: '53555dafbd69907a9294122387c4832b'
 #TODO: If you changed JENKINS_CREDENTIALS_ID in vars.sh, update it here too:
-      credentials-id: '16ff7b81-8edd-4212-8075-624e031006de'
+#      credentials-id: '16ff7b81-8edd-4212-8075-624e031006de'
