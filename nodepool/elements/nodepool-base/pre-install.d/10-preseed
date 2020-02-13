@@ -53,6 +53,9 @@ esac
 sudo apt-get  update -y
 sudo apt install openssh-server -y
 
+
+sudo apt install openjdk-8-jdk openjdk-8-jre -y
+
 sudo apt install software-properties-common -y
 sudo add-apt-repository ppa:deadsnakes/ppa -y
 sudo apt install python3.7 -y

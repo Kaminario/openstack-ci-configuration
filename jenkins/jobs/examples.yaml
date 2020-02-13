@@ -25,6 +25,9 @@
     builders:
       - link-logs
       - net-info
+      - change-hostname
+      - change-iscsi-initiator-name
+      - clear-iscsi-array
       - devstack-checkout-http
       #- shell: |
           #!/bin/bash -xe
@@ -37,14 +40,89 @@
           #sleep 300
       - shell: |
           #!/bin/bash -xe
-          sudo bash -c 'cat <<EOF > /etc/iscsi/initiatorname.iscsi
-          InitiatorName=iqn.1993-08.org.debian:01:$HOSTNAME
-          EOF'
-          sudo bash -c 'service open-iscsi restart'
-          sudo bash -c 'pip install krest'
+          echo "Starting the Job"
+          #sudo bash -c 'apt-get purge --yes ntp'
+          #sudo bash -c "apt-get install --yes chrony"
+          sudo bash -c "apt-get update"
+          sudo bash -c "apt-get install --yes systemd-journal-remote build-essential libssl-dev libffi-dev python-dev libxml2-dev libxslt1-dev zlib1g-dev"
+          
+          
+          # Uncomment
+          sudo bash -c 'apt-get install --yes sg3-utils multipath-tools'
+          
+          #sudo bash -c "sed -i '/server/c\' /etc/chrony/chrony.conf"
+          sudo bash -c "cat <<EOF >> /etc/hosts
+          192.168.6.7 il-ksm1-147.kaminario.local
+          EOF"
+          #sudo bash -c 'service chrony restart'
+          #sudo bash -c 'chronyc sources'
+          #trap '' SIGTERM
+          #sudo bash -c 'service open-iscsi restart'
+          #sudo bash -c 'pip install krest'
+          
+          #cat <<EOF >>free_memory.sh
+          #while true; do
+          #sync && echo 1 | sudo tee /proc/sys/vm/drop_caches
+          #sync && echo 2 | sudo tee /proc/sys/vm/drop_caches
+          #sync && echo 3 | sudo tee /proc/sys/vm/drop_caches
+          #sleep 120
+          #done
+          #EOF
+          #chmod +x free_memory.sh
+          #nohup bash free_memory.sh >> free_memory.txt 2>&1 &
+          #export JAVA_PID=$(top -b -n 1 | grep java | cut -f 2 -d " ")
+          #sudo bash -c "cat <<EOF > /proc/$JAVA_PID/oom_adj
+          #-17
+          #EOF"
+          
           function pre_test_hook {{
+              #UPSTREAM_REMOTE=https://review.openstack.org/openstack/cinder
+              #CHANGE_NUM=$ZUUL_CHANGE
+              #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+              #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+              #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+              #                 sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
               echo "Configure the local.conf file to properly setup kaminario driver in cinder.conf"
               cat <<EOF >$BASE/new/devstack/local.conf
+          [[local|localrc]]
+          FORCE=yes
+          # Enable Python 3.7
+          USE_PYTHON3=True
+          PYTHON3_VERSION=3.7
+          
+          IP_VERSION=4
+          Q_USE_SECGROUP=False
+          CINDER_ENABLED_BACKENDS=kaminario-iscsi:kaminario-iscsi
+          USE_SYSTEMD=FALSE
+          USE_SCREEN=True 
+          # Open vSwitch provider networking configuration
+          #Q_USE_PROVIDERNET_FOR_PUBLIC=True
+          #OVS_PHYSICAL_BRIDGE=br-ex
+          #PUBLIC_BRIDGE=br-ex
+          #OVS_BRIDGE_MAPPINGS=public:br-ex
+          
+          GIT_BASE=https://github.com
+          
+          LOGFILE=$DEST/logs/stack.sh.log
+          LOGDAYS=2
+          VERBOSE=True
+          LOG_COLOR=False
+          SCREEN_LOGDIR=/opt/stack/logs
+          #LIBVIRT_FIREWALL_DRIVER=nova.virt.firewall.NoopFirewallDriver
+          CINDER_SECURE_DELETE=False
+          #API_RATE_LIMIT=False
+          
+          
+          TEMPEST_VOLUME_DRIVER=kaminario_iscsi
+          TEMPEST_VOLUME_VENDOR="Kaminario"
+          TEMPEST_STORAGE_PROTOCOL=iSCSI
+          TEMPEST_VOLUME_MANAGE_SNAPSHOT=False
+          #TEMPEST_VOLUME_API_V1=True
+          
+          # These options allow you to specify a branch other than "master" be used
+          #CINDER_REPO=https://review.openstack.org/openstack/cinder
+          #CINDER_BRANCH=$LATEST_PATCHSET
+          
           [[post-config|\$CINDER_CONF]]
           [DEFAULT]
           enabled_backends=kaminario-iscsi
@@ -54,27 +132,102 @@
           #CINDER_PERIODIC_INTERVAL=10
           CINDER_SECURE_DELETE=False
           API_RATE_LIMIT=False
-
+          #enable_v1_api = True
+          
           [kaminario-iscsi]
           # add you driver configuration here
           volume_driver = cinder.volume.drivers.kaminario.kaminario_iscsi.KaminarioISCSIDriver
           volume_backend_name = kaminario-iscsi
           san_ip = 192.168.6.4
-          san_login = admin
-          san_password = admin
+          san_login = cinder
+          san_password = cinder
+          suppress_requests_ssl_warnings=True
+          #num_volume_device_scan_tries = 40
+          #Uncomment
+          use_multipath_for_image_xfer=True
+          disable_discovery=True
+          
           # Use post-extra because the tempest configuration file is
           # overwritten with the .sample after post-config.
           [[post-extra|\$TEMPEST_CONFIG]]
           [volume]
           storage_protocol=iSCSI
           vendor_name="Kaminario"
+          build_timeout=600
+          [volume-feature-enabled]
+          manage_snapshot=False
+          
+          [[post-config|\$NOVA_CONF]]
+          [libvirt]
+          # Uncomment
+          iscsi_use_multipath=True
+          
+          # Uncomment
+          volume_use_multipath=True
+          virt_type = kvm
           EOF
-              echo "Configure localrc file to properly setup CINDER_ENABLED_BACKENDS"
-              cat <<EOF >>$BASE/new/devstack/localrc
-          CINDER_ENABLED_BACKENDS=kaminario-iscsi:kaminario-iscsi
-          EOF
-              git clone https://nikesh-biarca:Nike.256029@github.com/vedamsgit/Kaminario -b concurrency
-              cp Kaminario/kaminario/* $BASE/new/cinder/cinder/volume/drivers/kaminario/
+              #echo "Configure localrc file to properly setup CINDER_ENABLED_BACKENDS"
+              #cat <<EOF >>$BASE/new/devstack/localrc
+          #CINDER_ENABLED_BACKENDS=kaminario-iscsi:kaminario-iscsi
+          #TEMPEST_VOLUME_VENDOR="Kaminario"
+          #TEMPEST_STORAGE_PROTOCOL=iSCSI
+          #TEMPEST_VOLUME_MANAGE_SNAPSHOT=False
+          #EOF
+              #cd /opt/stack/new/devstack
+              #sudo bash -c "sed -i 's/    install_python3/    #install_python3/g' inc/python"
+              #UPSTREAM_REMOTE=https://review.openstack.org/openstack/cinder
+              #cd /opt/stack/new/tempest
+              #CHANGE_NUM=437880
+              #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+              #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+              #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+              #                    sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+              #git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #cd /opt/stack/new/cinder
+              #if [ $ZUUL_CHANGE -eq 508141 ]
+              #then
+                  #CHANGE_NUM=$ZUUL_CHANGE
+                  #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+                  #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+                  #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* | sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+                  #git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #elif [ $ZUUL_CHANGE -eq 508167 ]
+              #then
+                  #CHANGE_NUM=$ZUUL_CHANGE
+                  #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+                  #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+                  #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* | sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+                  #git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #fi
+              #elif [ $ZUUL_CHANGE -eq 349019 ]
+              #then
+                  #CHANGE_NUM=$ZUUL_CHANGE
+                  #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+                  #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+                  #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+                                  #sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+                  #git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #elif [ $ZUUL_CHANGE -eq 350182 ]
+              #then
+                  #CHANGE_NUM=$ZUUL_CHANGE
+                  #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+                  #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+                  #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+                                  #sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+                  #git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #fi
+              #UPSTREAM_REMOTE=https://review.opendev.org/openstack/cinder
+              #cd /opt/stack/new/cinder
+              #if [ $ZUUL_CHANGE -ne 660062 ]
+              #then
+                  # CHANGE_NUM=$ZUUL_CHANGE
+              #  CHANGE_NUM=660062
+              #  CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+              #  PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+              #  LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+              #                    sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+              #  git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #fi
           }}
           export -f pre_test_hook
           # To keep our CINDER_ENABLED_BACKENDS configuration in localrc
@@ -82,14 +235,24 @@
           export PYTHONUNBUFFERED=true
           export DEVSTACK_GATE_TIMEOUT=300
           export DEVSTACK_GATE_TEMPEST=1
-          #export DEVSTACK_GATE_TEMPEST_REGEX='^(?=tempest.api.volume.test_volumes_snapshots.*)'
-          export DEVSTACK_GATE_TEMPEST_REGEX='^(?=.*volume*)(?!tempest.scenario.*)'
-          export TEMPEST_CONCURRENCY=23
-          export OVERRIDE_ENABLED_SERVICES=c-api,c-sch,c-vol,g-api,g-reg,key,mysql,n-api,n-cond,n-cpu,n-crt,n-net,n-obj,n-sch,rabbit,tempest
-          export DEVSTACK_GATE_FIXED_RANGE=10.1.0.0/20
-          export DEVSTACK_GATE_FLOATING_RANGE=192.168.6.128/29
-          export DEVSTACK_GATE_PUBLIC_NETWORK_GATEWAY=192.168.6.1
-          export GIT_BASE="https://git.openstack.org"
+          export DEVSTACK_GATE_NEUTRON=1
+          export BUILD_TIMEOUT=10800000
+          export DEVSTACK_GATE_TEMPEST_REGEX="^(?=.*volume*)(?!tempest.scenario.*)"
+          #export DEVSTACK_GATE_TEMPEST_REGEX="^(?=.*volume*)(?!tempest.scenario.*)(?!tempest.api.volume.admin.test_volumes_actions.VolumesActionsTest.test_force_detach_volume)"
+          #export DEVSTACK_GATE_TEMPEST_REGEX='^(?=.*volume)(?!.*boto)(?!.*test_volume_boot_pattern)(?!.*test_minimum_basic_scenario)(?!.*backup)(?!.*shelve)(?!.*AttachVolumeShelveTestJSON).*'
+          #export DEVSTACK_GATE_TEMPEST_REGEX='^(?=.*volume*)(?!tempest.scenario.*)(?!tempest.api.compute.admin.test_volume_swap.TestVolumeSwap.test_volume_swap.*)'
+          #if [ $ZUUL_CHANGE -eq 350182 ]
+          #then
+          export TEMPEST_CONCURRENCY=1
+          #else
+              #export TEMPEST_CONCURRENCY=1
+          #fi
+          export OVERRIDE_ENABLED_SERVICES=c-api,c-sch,c-vol,g-api,g-reg,key,mysql,n-api,n-cond,n-cpu,n-crt,n-obj,n-sch,rabbit,tempest
+          export OVERRIDE_ENABLED_SERVICES+=,quantum,q-svc,q-agt,q-dhcp,q-l3,q-meta,q-metering,placement-api,n-api-meta
+          #export DEVSTACK_GATE_FIXED_RANGE=10.1.0.0/20
+          #export DEVSTACK_GATE_FLOATING_RANGE=192.168.6.128/29
+          #export DEVSTACK_GATE_PUBLIC_NETWORK_GATEWAY=192.168.6.1
+          export GIT_BASE="https://github.com"
           if [ -z $ZUUL_PROJECT ]; then
               export ZUUL_PROJECT=openstack-dev/ci-sandbox
           fi
@@ -98,9 +261,7 @@
           fi
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
           ./safe-devstack-vm-gate-wrap.sh
-       #- shell: |
-         # #!/bin/bash -xe
-        #  sleep 300
+          #      - delete-volumes-after-tempest
 
     publishers:
       - devstack-logs
@@ -119,6 +280,9 @@
     builders:
       - link-logs
       - net-info
+      - change-hostname
+      - change-iscsi-initiator-name
+      - clear-FC-Array
       - devstack-checkout-http
       #- shell: |
           #!/bin/bash -xe
@@ -131,11 +295,84 @@
           #sleep 30
       - shell: |
           #!/bin/bash -xe
+          echo "Starting the Job"
+          #cat <<EOF >>free_memory.sh
+          #while true; do
+          #sync && echo 1 | sudo tee /proc/sys/vm/drop_caches
+          #sync && echo 2 | sudo tee /proc/sys/vm/drop_caches
+          #sync && echo 3 | sudo tee /proc/sys/vm/drop_caches
+          #sleep 120
+          #done
+          #EOF
+          #trap '' SIGTERM
+          #chmod +x free_memory.sh
+          #nohup bash free_memory.sh >> free_memory.txt 2>&1 &
+          #sudo bash -c 'apt-get purge --yes ntp'
+          #sudo bash -c "apt-get install --yes chrony"
+          #sudo bash -c "sed -i '/server/c\' /etc/chrony/chrony.conf"
+          #sudo bash -c "cat <<EOF >> /etc/chrony/chrony.conf
+          #server 192.168.6.7 iburst
+          #EOF"
+          #sudo bash -c 'service chrony restart'
+          #sudo bash -c 'chronyc sources'
+          #export JAVA_PID=$(top -b -n 1 | grep java | cut -f 2 -d " ")
+          #sudo bash -c "cat <<EOF > /proc/$JAVA_PID/oom_adj
+          #-17
+          #EOFi"
+          sudo bash -c "apt-get update"
+          sudo bash -c "apt-get install --yes systemd-journal-remote build-essential libssl-dev libffi-dev python-dev libxml2-dev libxslt1-dev zlib1g-dev"
+          sudo bash -c 'apt-get install --yes sysfsutils sg3-utils multipath-tools'
+          # sudo bash -c 'pip install krest'
+          echo "Configure the local.conf file to properly setup kaminario driver in cinder.conf"
+          sudo bash -c "cat <<EOF >> /etc/hosts
+          192.168.6.7 il-ksm1-147.kaminario.local
+          EOF"
           function pre_test_hook {{
-              sudo bash -c 'apt-get install sysfsutils sg3-utils multipath-tools'
-              sudo bash -c 'pip install krest'
-              echo "Configure the local.conf file to properly setup kaminario driver in cinder.conf"
+              #UPSTREAM_REMOTE=https://review.openstack.org/openstack/cinder
+              #CHANGE_NUM=$ZUUL_CHANGE
+              #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+              #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+              #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+               #                 sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
               cat <<EOF >$BASE/new/devstack/local.conf
+          [[local|localrc]]
+          FORCE=yes
+          # Enable Python 3.7
+          USE_PYTHON3=True
+          PYTHON3_VERSION=3.7
+          
+          IP_VERSION=4
+          Q_USE_SECGROUP=False
+          CINDER_ENABLED_BACKENDS=kaminario-FC:kaminario-FC
+          USE_SYSTEMD=FALSE
+          # Open vSwitch provider networking configuration
+          #Q_USE_PROVIDERNET_FOR_PUBLIC=True
+          #OVS_PHYSICAL_BRIDGE=br-ex
+          #PUBLIC_BRIDGE=br-ex
+          #OVS_BRIDGE_MAPPINGS=public:br-ex
+          
+          GIT_BASE=https://github.com
+          USE_SCREEN=True
+          LOGFILE=$DEST/logs/stack.sh.log
+          LOGDAYS=2
+          VERBOSE=True
+          LOG_COLOR=False
+          SCREEN_LOGDIR=/opt/stack/logs
+          #LIBVIRT_FIREWALL_DRIVER=nova.virt.firewall.NoopFirewallDriver
+          CINDER_SECURE_DELETE=False
+          #API_RATE_LIMIT=False
+          
+          
+          TEMPEST_VOLUME_DRIVER=kaminario_fc
+          TEMPEST_VOLUME_VENDOR="Kaminario"
+          TEMPEST_STORAGE_PROTOCOL=FC
+          TEMPEST_VOLUME_MANAGE_SNAPSHOT=False
+          #TEMPEST_VOLUME_API_V1=True
+          
+          # These options allow you to specify a branch other than "master" be used
+          #CINDER_REPO=https://review.openstack.org/openstack/cinder
+          #CINDER_BRANCH=$LATEST_PATCHSET
+          
           [[post-config|\$CINDER_CONF]]
           [DEFAULT]
           enabled_backends=kaminario-FC
@@ -145,26 +382,85 @@
           #CINDER_PERIODIC_INTERVAL=10
           CINDER_SECURE_DELETE=False
           API_RATE_LIMIT=False
+          #enable_v1_api = True
           [kaminario-FC]
           # add you driver configuration here
           volume_driver = cinder.volume.drivers.kaminario.kaminario_fc.KaminarioFCDriver
           volume_backend_name = kaminario-FC
           san_ip = 192.168.6.11
-          san_login = admin
-          san_password = admin
+          san_login = cinder
+          san_password = cinder
+          suppress_requests_ssl_warnings=True
+          num_volume_device_scan_tries = 20
+          use_multipath_for_image_xfer=True
+          disable_discovery=True
+          #unique_fqdn_network=False
           # Use post-extra because the tempest configuration file is
           # overwritten with the .sample after post-config.
           [[post-extra|\$TEMPEST_CONFIG]]
           [volume]
           storage_protocol=FC
           vendor_name="Kaminario"
+          [volume-feature-enabled]
+          manage_snapshot=False
+          
+          [[post-config|\$NOVA_CONF]]
+          [libvirt]
+          #iscsi_use_multipath=True
+          volume_use_multipath = true
+          virt_type = kvm
           EOF
-              echo "Configure localrc file to properly setup CINDER_ENABLED_BACKENDS"
-              cat <<EOF >>$BASE/new/devstack/localrc
-          CINDER_ENABLED_BACKENDS=kaminario-FC:kaminario-FC
-          EOF
-              git clone https://nikesh-biarca:Nike.256029@github.com/vedamsgit/Kaminario -b concurrency
-              cp Kaminario/kaminario/* $BASE/new/cinder/cinder/volume/drivers/kaminario/
+          
+              #UPSTREAM_REMOTE=https://review.openstack.org/openstack/tempest
+              #cd /opt/stack/new/tempest
+              #CHANGE_NUM=437880
+              #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+              #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+              #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+               #                   sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+              #git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              
+              #cd /opt/stack/new/cinder
+              #UPSTREAM_REMOTE=https://review.opendev.org/openstack/cinder
+              #cd /opt/stack/new/tempest
+              #CHANGE_NUM=660062
+              #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+              #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+              #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+              #                    sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+              #git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #UPSTREAM_REMOTE=https://review.opendev.org/openstack/cinder
+              #cd /opt/stack/new/cinder
+              #if [ $ZUUL_CHANGE -ne 660062 ]
+              #then
+                #CHANGE_NUM=$ZUUL_CHANGE
+              #  CHANGE_NUM=660062
+              #  CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+              #  PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+              #  LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+              #                    sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+              #  git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #elif [ $ZUUL_CHANGE -eq 508167 ]
+              #then
+                #CHANGE_NUM=$ZUUL_CHANGE
+                #CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+                #PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+                #LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+                                  #sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+                #git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #fi
+              #UPSTREAM_REMOTE=https://review.opendev.org/openstack/cinder
+              #cd /opt/stack/new/cinder
+              #if [ $ZUUL_CHANGE -ne 660062 ]
+              #then
+                # CHANGE_NUM=$ZUUL_CHANGE
+              #  CHANGE_NUM=660062
+              #  CHANGE=$(echo -n  $CHANGE_NUM | tail -c  2)
+              #  PATCHSET_BASE=refs/changes/$CHANGE/$CHANGE_NUM
+              #  LATEST_PATCHSET=$(git ls-remote $UPSTREAM_REMOTE $PATCHSET_BASE/\* |
+              #                    sort -t/ -k 5 -n | tail -n1 | cut -d$'\t' -f2)
+              #  git fetch $UPSTREAM_REMOTE $LATEST_PATCHSET && git cherry-pick FETCH_HEAD
+              #fi
           }}
           export -f pre_test_hook
           # To keep our CINDER_ENABLED_BACKENDS configuration in localrc
@@ -172,14 +468,24 @@
           export PYTHONUNBUFFERED=true
           export DEVSTACK_GATE_TIMEOUT=300
           export DEVSTACK_GATE_TEMPEST=1
-          #export DEVSTACK_GATE_TEMPEST_REGEX='^(?=tempest.api.volume.test_volumes_snapshots.*)'
+          export DEVSTACK_GATE_NEUTRON=1
+          export BUILD_TIMEOUT=10800000
+          #export DEVSTACK_GATE_TEMPEST_REGEX='^(?=.*volume)(?!.*boto)(?!.*test_volume_boot_pattern)(?!.*test_minimum_basic_scenario)(?!.*backup)(?!.*shelve)(?!.*AttachVolumeShelveTestJSON).*'
+          #export DEVSTACK_GATE_TEMPEST_REGEX="^(?=.*volume*)(?!tempest.scenario.*)(?!tempest.api.compute.admin.test_volume_swap.TestVolumeSwap.test_volume_swap.*)"
           export DEVSTACK_GATE_TEMPEST_REGEX="^(?=.*volume*)(?!tempest.scenario.*)"
-          #export TEMPEST_CONCURRENCY=23
-          export OVERRIDE_ENABLED_SERVICES=c-api,c-sch,c-vol,g-api,g-reg,key,mysql,n-api,n-cond,n-cpu,n-crt,n-net,n-obj,n-sch,rabbit,tempest
-          export DEVSTACK_GATE_FIXED_RANGE=10.1.0.0/20
-          export DEVSTACK_GATE_FLOATING_RANGE=192.168.6.144/29
-          export DEVSTACK_GATE_PUBLIC_NETWORK_GATEWAY=192.168.6.1
-          export GIT_BASE="https://git.openstack.org"
+          #export DEVSTACK_GATE_TEMPEST_REGEX="^(?=.*volume*)(?!tempest.scenario.*)(?!tempest.api.volume.admin.test_volumes_actions.VolumesActionsTest.test_force_detach_volume)"
+          if [ $ZUUL_CHANGE -eq 350182 ]
+          then
+             export TEMPEST_CONCURRENCY=2
+          else
+             export TEMPEST_CONCURRENCY=1
+          fi
+          export OVERRIDE_ENABLED_SERVICES=c-api,c-sch,c-vol,g-api,g-reg,key,mysql,n-api,n-cond,n-cpu,n-crt,n-obj,n-sch,rabbit,tempest
+          export OVERRIDE_ENABLED_SERVICES+=,quantum,q-svc,q-agt,q-dhcp,q-l3,q-meta,q-metering,placement-api,n-api-meta
+          #export DEVSTACK_GATE_FIXED_RANGE=10.1.0.0/20
+          #export DEVSTACK_GATE_FLOATING_RANGE=192.168.6.144/29
+          #export DEVSTACK_GATE_PUBLIC_NETWORK_GATEWAY=192.168.6.1
+          export GIT_BASE="https://github.com"
           if [ -z $ZUUL_PROJECT ]; then
               export ZUUL_PROJECT=openstack-dev/ci-sandbox
           fi
@@ -188,64 +494,8 @@
           fi
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
           ./safe-devstack-vm-gate-wrap.sh
+          #      - delete-volumes-after-tempest
 
     publishers:
       - devstack-logs
       - console-log
-
-- job-template:
-    name: 'kaminario-dsvm-test1'
-    node: '{node}'
-
-    wrappers:
-      - timeout:
-          timeout: 300
-          fail: true
-      - timestamps
-
-    builders:
-      - link-logs
-      - net-info
-      - shell: |
-          #!/bin/bash -xe
-          echo "created a folder"
-          sudo mkdir /opt/stack
-          echo "created a folder"
-          sudo mkdir /opt/stack/logs
-          git clone https://github.com/nikesh-biarca/log-test.git
-          #sudo mkdir logs
-          #sudo cp -r log-test/* logs/
-          sudo cp -r log-test/* /opt/stack/logs
-          sleep 30
-    publishers:
-      - dummy-logs
-      - console-log
-
-
-- job-template:
-    name: 'kaminario-dsvm-test2'
-    node: '{node}'
-
-    wrappers:
-      - timeout:
-          timeout: 300
-          fail: true
-      - timestamps
-
-    builders:
-      - link-logs
-      - net-info
-      - shell: |
-          #!/bin/bash -xe
-          echo "created a folder"
-          sudo mkdir /opt/stack
-          echo "created a folder"
-          sudo mkdir /opt/stack/logs
-          git clone https://github.com/nikesh-biarca/log-test.git
-          sudo cp -r log-test/* /opt/stack/logs
-
-          sleep 600
-    publishers:
-      - dummy-logs
-      - console-log
-

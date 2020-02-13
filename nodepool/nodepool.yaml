@@ -39,12 +39,14 @@ labels:
 diskimages:
     - name: dpc
       elements:
-        - ubuntu
-        - vm
-        - openstack-repos
-        - puppet
-        - nodepool-base
-        - cache-devstack
+      - ubuntu
+      - vm
+      - simple-init
+      - openstack-repos
+      - nodepool-base
+      - cache-devstack
+      - growroot
+      - infra-package-needs
       release: bionic
       env-vars:
         TMPDIR: /opt/dib_tmp
@@ -59,7 +61,8 @@ providers:
     auth-url: 'http://192.168.6.6/identity/v3/'
     project-name: 'demo'
     boot-timeout: 1200
-    user-domain-name: Default
+    project-domain-id: default
+    user-domain-id: default
     max-servers: 1
     networks:
       - name: private
@@ -79,7 +82,8 @@ providers:
     password: 'Vedams123'
     auth-url: 'http://192.168.6.6/identity/v3/'
     project-name: 'demo'
-    user-domain-name: Default
+    project-domain-id: default
+    user-domain-id: default
     boot-timeout: 1200
     max-servers: 1
     networks:
@@ -97,11 +101,11 @@ providers:
 
 targets:
   - name: jenkins1
-    jenkins:
+    kaminario:
       url: 'http://localhost:8080/'
 #TODO: If you are using a different user in vars.sh JENKINS_API_USER, update it here.
-      user: 'jenkins'
+      user: 'kaminario'
 #TODO: If you are using secured jenkins, update this to vars.sh JENKINS_API_KEY.
-      apikey: '113be19f07e83a0444a1c502584c9f0717'
+      apikey: '11b3491ec591409306f28398ca09601ff4'
 #TODO: If you changed JENKINS_CREDENTIALS_ID in vars.sh, update it here too:
-      credentials-id: 'eec45613-1807-4007-b5a9-449c950c7f3f'
+      credentials-id: 'c452bb18-3120-4eb2-88db-d3bbaf817ffe'

@@ -57,7 +57,289 @@
           echo "Triggered by: https://review.openstack.org/$ZUUL_CHANGE patchset $ZUUL_PATCHSET"
 
           # TODO: Update this link to point to your log server
-          echo "Detailed logs: http://54.209.116.144/$LOG_PATH/"
+          echo "Detailed logs: http://52.3.254.104/$LOG_PATH/"
+
+- builder:
+    name: change-hostname
+    builders:
+      - shell: |
+          #!/bin/sh
+          cat <<EOF >change_hostname.py
+          import uuid
+          import time
+          a = uuid.getnode()
+          b = str(a)
+          c = "ubuntu-" + b
+          hname = c[0:32]
+          import subprocess
+          subprocess.call(['sudo', 'hostname', hname])
+          time.sleep(60)
+          EOF
+          echo "changing hostname"
+          python change_hostname.py
+- builder:
+    name: change-iscsi-initiator-name
+    builders:
+      - shell: |
+          #!/bin/sh
+          op="$(iscsi-iname)"
+          sudo bash -c "cat <<EOF > /etc/iscsi/initiatorname.iscsi
+          InitiatorName=${op}
+          EOF"
+          sudo bash -c "service iscsid restart"
+
+
+- builder:
+    name: delete-volumes-after-tempest
+    builders:
+      - shell: |
+          #!/bin/sh
+          source /opt/stack/new/devstack/openrc admin admin
+          CINDER_LIST=$(openstack volume list --all-projects --status available)
+          declare -A arr=$(echo "$CINDER_LIST" | grep available | grep -v deleting | cut -d \| -f 2 | tr -d ' ')
+          for c in "${arr[@]}"; do echo "$c"; openstack volume delete "${c}"; done
+          sudo chmod -R 755 /home/jenkins/workspace/kaminario-dsvm-tempest-full-iscsi/*
+
+- builder:
+    name: clear-iscsi-array
+    builders:
+      - shell: |
+          #!/bin/sh
+          sudo bash -c "apt-get update -y"
+
+
+          #sudo bash -c  "apt-get install -y build-essential"
+          #sudo bash -c  "apt-get install -y checkinstall"
+          #sudo bash -c  "apt-get install -y libreadline-gplv2-dev"
+          #sudo bash -c  "apt-get install -y libncursesw5-dev"
+          #sudo bash -c  "apt-get install -y libssl-dev"
+          #sudo bash -c  "apt-get install -y libsqlite3-dev"
+          #sudo bash -c  "apt-get install -y tk-dev"
+          #sudo bash -c  "apt-get install -y libgdbm-dev"
+          #sudo bash -c  "apt-get install -y libc6-dev"
+          #sudo bash -c  "apt-get install -y libbz2-dev"
+          #sudo bash -c  "apt-get install -y zlib1g-dev"
+          #sudo bash -c  "apt-get install -y openssl"
+          #sudo bash -c  "apt-get install -y libffi-dev"
+          #sudo bash -c  "apt-get install -y python3-dev"
+          #sudo bash -c  "apt-get install -y python3-setuptools"
+          #sudo bash -c  "apt-get install -y wget"
+          #wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tar.xz
+          #tar xvf Python-3.7.0.tar.xz
+          #cd Python-3.7.0
+          #./configure --enable-optimizations
+          #sudo bash -c  "make altinstall"
+          #cd ..
+
+          #sudo bash -c "pip3.7 install sqlalchemy"
+          #sudo bash -c "pip3.7 install tox"
+          #sudo bash -c "pip3.7 install krest"
+          #sudo bash -c "pip3.7 install -U virtualenv"
+
+          ##sudo bash -c "pip3.7 install --upgrade pip tox virtualenv"
+
+          sudo bash -c "apt install software-properties-common -y"
+          #sudo bash -c "echo 'deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu xenial main' >> /etc/apt/sources.list.d/python37.list"
+          #sudo bash -c "add-apt-repository ppa:deadsnakes/ppa -y"
+
+          cat <<EOF >add_ppa.sh
+          #!/bin/bash
+
+          for i in {1..5}; do
+              if sudo bash -c "add-apt-repository ppa:deadsnakes/ppa -y" &> /dev/null; then
+              	sudo bash -c "apt-get update -y"
+                  break
+              fi
+              sleep 12
+          done
+          EOF
+
+          echo "************Added PPA****************"
+          bash add_ppa.sh
+          cat <<EOF >install_python.sh
+          for i in {1..5}; do
+          	if sudo bash -c "apt-get update -y" && \
+              	sudo bash -c "apt install python3.7 python3.7-dev -y" && \
+                  sudo bash -c "curl -O https://bootstrap.pypa.io/get-pip.py" && \
+          		sudo bash -c "python3.7 get-pip.py" &> /dev/null; then
+                  break
+              fi
+              sleep 12
+          done
+          EOF
+
+          bash install_python.sh
+          echo "Installed python3.7"
+          ##sudo bash -c "which python3.7"
+
+          sudo bash -c 'python3.7 -m pip install --upgrade pip'
+          sudo bash -c 'python3.7 -m pip install sqlalchemy'
+          sudo bash -c 'python3.7 -m pip install tox'
+          sudo bash -c 'python3.7 -m pip install krest'
+          sudo bash -c 'python3.7 -m pip install -U virtualenv'
+          sudo bash -c 'python3.7 -m pip install -U setuptools XStatic-Patternfly-Bootstrap-Treeview devstack-tools PyYAML SQLAlchemy XStatic XStatic-DataTables XStatic-jQuery Flask-Script junit-xml XStatic-Patternfly pyperclip PrettyTable netifaces alembic pycparser wrapt Mako'
+
+          ##sudo bash -c 'pip install --upgrade pip tox virtualenv'
+
+          cat <<EOF >clear_array_iscsi.py
+          import krest
+          ep = krest.EndPoint("192.168.6.4", "cinder", "cinder", ssl_validate=False)
+          def delete_mapping(vol="volumes"):   
+              for host in ep.search("hosts",name__contains="ubuntu-").hits:
+                  map_rs=ep.search("mappings",host=host)
+                  maps=map_rs.total
+                  for i in range(maps):
+                      vol_name = map_rs.hits[i].volume.name
+                      volsnap_rs = ep.search(vol, name=vol_name)
+                      if hasattr(volsnap_rs, 'hits') and volsnap_rs.total != 0:
+                          volgroup = volsnap_rs.hits[0].volume_group
+                          map_rs.hits[i].delete()
+                          if vol =="volumes":
+                              for vols in ep.search("volumes",volume_group=volgroup).hits:
+                                  if vols.name==vol_name:
+                                      vols.delete()
+                                            
+                              volume=ep.search("volumes",volume_group=volgroup).hits
+                              if volume:
+                                  for v in volume:
+                                      v.delete();
+                              if ep.search("volumes",volume_group=volgroup).total==0:
+                                  volgroup.delete()
+                              check_mappings= ep.search("mappings",host=host)
+                              if not check_mappings:
+                                  host.delete()
+
+          delete_mapping("snapshots")
+          delete_mapping()
+
+          EOF
+          echo "************clearing array****************"
+          
+          python3.7 clear_array_iscsi.py
+
+- builder:
+    name: clear-FC-Array
+    builders:
+      - shell: |
+          #!/bin/sh
+    
+          sudo bash -c "apt-get update -y"
+          
+          #sudo bash -c  "apt-get install -y build-essential"
+          #sudo bash -c  "apt-get install -y checkinstall"
+          #sudo bash -c  "apt-get install -y libreadline-gplv2-dev"
+          #sudo bash -c  "apt-get install -y libncursesw5-dev"
+          #sudo bash -c  "apt-get install -y libssl-dev"
+          #sudo bash -c  "apt-get install -y libsqlite3-dev"
+          #sudo bash -c  "apt-get install -y tk-dev"
+          #sudo bash -c  "apt-get install -y libgdbm-dev"
+          #sudo bash -c  "apt-get install -y libc6-dev"
+          #sudo bash -c  "apt-get install -y libbz2-dev"
+          #sudo bash -c  "apt-get install -y zlib1g-dev"
+          #sudo bash -c  "apt-get install -y openssl"
+          #sudo bash -c  "apt-get install -y libffi-dev"
+          #sudo bash -c  "apt-get install -y python3-dev"
+          #sudo bash -c  "apt-get install -y python3-setuptools"
+          #sudo bash -c  "apt-get install -y wget"
+          #wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tar.xz
+          #tar xvf Python-3.7.0.tar.xz
+          #cd Python-3.7.0
+          #./configure --enable-optimizations
+          #sudo bash -c  "make altinstall"
+          #cd ..
+          
+          #sudo bash -c "pip3.7 install sqlalchemy"
+          #sudo bash -c "pip3.7 install tox"
+          #sudo bash -c "pip3.7 install krest"
+          #sudo bash -c "pip3.7 install -U virtualenv"
+          #sudo bash -c "pip3.7 install --upgrade pip tox virtualenv"
+          
+          
+          sudo bash -c "apt install software-properties-common -y"
+          #sudo bash -c "echo 'deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu xenial main' >> /etc/apt/sources.list.d/python37.list"
+          #sudo bash -c "add-apt-repository ppa:deadsnakes/ppa -y"
+          
+          cat <<EOF >add_ppa.sh
+          #!/bin/bash
+          
+          for i in {1..5}; do
+              if sudo bash -c "add-apt-repository ppa:deadsnakes/ppa -y" &> /dev/null; then
+                  
+                  sudo bash -c "apt-get update -y"
+                  break
+              fi
+              sleep 12
+          done
+          EOF
+          
+          echo "************Added PPA****************"
+          
+          bash add_ppa.sh
+          
+          cat <<EOF >install_python.sh
+          for i in {1..5}; do
+              if sudo bash -c "apt-get update -y" && \
+                  sudo bash -c "apt install python3.7 python3.7-dev -y" && \
+                  sudo bash -c "curl -O https://bootstrap.pypa.io/get-pip.py" && \
+                  sudo bash -c "python3.7 get-pip.py" &> /dev/null; then
+                  break
+              fi
+              sleep 12
+          done
+          EOF
+          
+          bash install_python.sh
+          
+          echo "Installed python3.7"
+          
+          #sudo bash -c "which python3.7"
+          
+          sudo bash -c 'python3.7 -m pip install --upgrade pip'
+          
+          sudo bash -c 'python3.7 -m pip install sqlalchemy'
+          
+          sudo -H python3.7 -m pip install tox
+          sudo bash -c 'python3.7 -m pip install krest'
+          sudo bash -c 'python3.7 -m pip install -U setuptools XStatic-Patternfly-Bootstrap-Treeview devstack-tools PyYAML SQLAlchemy XStatic XStatic-DataTables XStatic-jQuery Flask-Script junit-xml XStatic-Patternfly pyperclip PrettyTable netifaces alembic pycparser wrapt Mako'
+          #sudo bash -c 'pip install --upgrade pip tox virtualenv'
+          cat <<EOF >clear_array_fc.py
+          import requests
+          K2_RETRY_ERRORS = ("MC_ERR_BUSY", "MC_ERR_BUSY_SPECIFIC",
+                   "MC_ERR_INPROGRESS", "MC_ERR_START_TIMEOUT",
+                   "MC_ERR_NOT_ALLOWED")
+          import krest
+          K2HTTPError = requests.exceptions.HTTPError
+          ep = krest.EndPoint("192.168.6.11", "admin", "admin", ssl_validate=False)
+          for host in ep.search("hosts",name__contains="ubuntu-").hits:
+                  map_rs=ep.search("mappings",host=host)
+                  maps=map_rs.total
+                  for i in range(maps):
+                      try:
+                          vol_name = map_rs.hits[i].volume.name
+                          volsnap_rs = ep.search("snapshots", name=vol_name)
+                          if hasattr(volsnap_rs, 'hits') and volsnap_rs.total != 0:
+                              map_rs.hits[i].delete()
+                              volsnap_rs.hits[0].delete()
+                      except(requests.exceptions.HTTPError):
+                          pass
+                  map_rs=ep.search("mappings",host=host)
+                  maps=map_rs.total
+                  for i in range(maps):
+                      vol_name = map_rs.hits[i].volume.name
+                      vg = map_rs.hits[i].volume.volume_group
+                      vol_rs = ep.search("volumes", name=vol_name)
+                      if hasattr(vol_rs, 'hits') and vol_rs.total != 0:
+                          map_rs.hits[i].delete()
+                      vg_rs=ep.search("volumes",volume_group=vg)
+                      if vg_rs:
+                          for vol in vg_rs.hits:
+                             vol.delete();
+                      vg_rs.hits[0].volume_group.delete()
+                  host.delete()
+          EOF
+          echo "************clearing array****************"
+          python3.7 clear_array_fc.py
+          echo "DONE"
 
 - publisher:
     name: console-log
@@ -92,7 +374,6 @@
               source: 'log-test/**'
               keep-hierarchy: true
               copy-after-failure: true
-
 
 - builder:
     name: net-info

@@ -1,72 +1,101 @@
 includes:
-    #TODO: Rename this file. These functions are what enables single use nodes in nodepool.
-  - python-file: openstack_functions.py
+  #TODO: Rename this file. These functions are what enables single use nodes in nodepool.
+- python-file: openstack_functions.py
 
 pipelines:
-  - name: check
-    description: Newly uploaded patchsets enter this pipeline to receive an initial +/-1 Verified vote from Jenkins.
-    failure-message: "Build failed. For 3rd party CI contact info: https://wiki.openstack.org/wiki/ThirdPartySystems"
-    manager: IndependentPipelineManager
-    #require:
-      #open: true
-      #current-patchset: true
-      #approval:
-        #- verified: [1]
-          #username: jenkins
-    trigger:
-      gerrit:
-        - event: patchset-created
-          branch: master
-        - event: change-restored
-          branch: master
-        #- event: comment-added
-         # branch: master
-          #username: jenkins
-        - event: comment-added
-          branch: master
-          comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*recheck(( (?:bug|lp)[\s#:]*(\d+))|( no bug))\s*$
-        - event: comment-added
-          branch: master
-          comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*run(( (?:bug|lp)[\s#:]*(\d+))|(-Kaminario K2 CI))\s*$
-    success:
-      gerrit:
-        verified: 1
-      smtp:
-        #TODO: Update these to real e-mail addresses
-        to: third_party_ci@example.com
-        from: zuul@example.com
-        subject: 'Silent check of {change.project} {change.number},{change.patchset} passed'
-    failure:
-      gerrit:
-        verified: -1
-      smtp:
-        #TODO: Update these to real e-mail addresses
-        to: third_party_ci@example.com
-        from: zuul@example.com
-        subject: 'Silent check of {change.project} {change.number},{change.patchset} failed'
-    merge-failure:
-      smtp:
-        #TODO: Update these to real e-mail addresses
-        to: third_party_ci@example.com
-        from: zuul@example.com
-        subject: Upstream change {change} has a merge failure
+- name: check
+  description: Newly uploaded patchsets enter this pipeline to receive an initial +/-1 Verified vote from Jenkins.
+  failure-message: "Build failed. For 3rd party CI contact info: https://wiki.openstack.org/wiki/ThirdPartySystems"
+  manager: IndependentPipelineManager
+  require:
+    #open: true
+    #current-patchset: true
+    approval:
+      - verified: [1]
+        username: zuul
+  trigger:
+    gerrit:
+      - event: patchset-created
+        branch: master
+      - event: change-restored
+        branch: master
+      #- event: comment-added
+       # branch: master
+        #username: jenkins
+      - event: comment-added
+        branch: master
+        comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*recheck(( (?:bug|lp)[\s#:]*(\d+))|( no bug))\s*$
+      - event: comment-added
+        branch: master
+        comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*run(( (?:bug|lp)[\s#:]*(\d+))|(-Kaminario K2 CI))\s*$
+
+      - event: patchset-created
+        branch: stable/train
+      - event: change-restored
+        branch: stable/train
+      #- event: comment-added
+       # branch: master
+        #username: jenkins
+      - event: comment-added
+        branch: stable/train
+        comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*recheck(( (?:bug|lp)[\s#:]*(\d+))|( no bug))\s*$
+      - event: comment-added
+        branch: stable/train
+        comment: (?i)^(Patch Set [0-9]+:)?( [\w\\+-]*)*(\n\n)?\s*run(( (?:bug|lp)[\s#:]*(\d+))|(-Kaminario K2 CI))\s*$
+
+  success:
+    gerrit:
+      verified: 1
+    smtp:
+      #TODO: Update these to real e-mail addresses
+      to: third_party_ci@example.com
+      from: zuul@example.com
+      subject: 'Silent check of {change.project} {change.number},{change.patchset} passed'
+  failure:
+    gerrit:
+      verified: -1
+    smtp:
+      #TODO: Update these to real e-mail addresses
+      to: third_party_ci@example.com
+      from: zuul@example.com
+      subject: 'Silent check of {change.project} {change.number},{change.patchset} failed'
+  merge-failure:
+    smtp:
+      #TODO: Update these to real e-mail addresses
+      to: third_party_ci@example.com
+      from: zuul@example.com
+      subject: Upstream change {change} has a merge failure
 
 jobs:
-  - name: ^dsvm-tempest.*$
-    parameter-function: single_use_node
+- name: ^dsvm-tempest.*$
+  parameter-function: single_use_node
 
 projects:
-  - name: openstack-dev/ci-sandbox
-    check:
-      # Remove this after successfully verifying communication with upstream
-      # and seeing a posted successful review.
+- name: openstack/cinder
+  check:
+    # Remove this after successfully verifying communication with upstream
+    # and seeing a posted successful review.
 #      - dsvm-tempest-my-cinder-driver
-    #check1:
-      # Uncomment this job when you have a jenkins slave running and want to
-      # test a full Tempest run within devstack.
-     # - dsvm-tempest-full
-     - kaminario-dsvm-tempest-full-iscsi
-     - kaminario-dsvm-tempest-full-FC 
-     #- kaminario-dsvm-test1
-     #- kaminario-dsvm-test2
+  #check1:
+    # Uncomment this job when you have a jenkins slave running and want to
+    # test a full Tempest run within devstack.
+   # - dsvm-tempest-full
+   - kaminario-dsvm-tempest-full-iscsi
+   - kaminario-dsvm-tempest-full-FC
+   #- kaminario-dsvm-test1
+   #- kaminario-dsvm-test2
+- name: openstack/os-brick
+  check:
+    # Remove this after successfully verifying communication with upstream
+    # and seeing a posted successful review.
+#      - dsvm-tempest-my-cinder-driver
+  #check1:
+    # Uncomment this job when you have a jenkins slave running and want to
+    # test a full Tempest run within devstack.
+   # - dsvm-tempest-full
+   - kaminario-dsvm-tempest-full-iscsi
+   - kaminario-dsvm-tempest-full-FC
+   #- kaminario-dsvm-test1
+   #- kaminario-dsvm-test2
 
+   
