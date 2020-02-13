@@ -1,0 +1,16 @@
+# Insert OSCC file contents here as explained in the
+# documentation so that nodepool is able to
+# authenticate to your cloud(s)
+#
+clouds:
+  local-fc:
+    auth:
+      auth_url: http://192.168.6.6/identity/v3/
+      project_name: demo
+      username: admin
+      password: Vedams123
+      #      user_domain_name: Default
+      project_domain_id: default
+      user_domain_id: default
+      # project_domain_name: Default
+    region_name: RegionOne
